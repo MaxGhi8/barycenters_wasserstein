@@ -3,7 +3,8 @@
 This repository contains the Python implementation accompanying the paper:
 
 > **Computing Wasserstein Barycenters via Linear Programming**  
-> Stefano Gualandi
+> Gennaro Auricchio, Federico Bassetti, Stefano Gualandi, Marco Veneroni
+> CPAIOR 2019
 
 ## Overview
 
@@ -19,7 +20,7 @@ Following the notation of the paper, let:
 
 - $V = \{1,\ldots,N\}^2$ be the regular $N\times N$ pixel grid, with $n = N^2$ nodes.
 - $K$ be the number of input images.
-- $\mu_k \in \mathbb{R}^n_+$ be the $k$-th input discrete probability measure (normalised histogram), for $k = 1,\ldots,K$, so that $\sum_{v \in V} \mu_k(v) = 1$.
+- $\mu_k \in \mathbb{R}^n_+$ be the $k$-th input discrete probability measure (normalised histogram), for $k = 1,\ldots,K$, so that $\sum_{i \in V} \mu_k(i) = 1$.
 - $G = (V, A)$ be a directed graph on the pixel grid, with arc set $A \subseteq V \times V$.
 - $c: A \to \mathbb{R}_+$ be the arc cost function, encoding the ground metric between pixels.
 
@@ -31,7 +32,7 @@ $$\mathcal{W}_c(\mu, \nu) = \inf_{\pi \in \Pi(\mu,\nu)} \sum_{(x,y) \in V \times
 
 where $\Pi(\mu,\nu)$ is the set of all probability measures on $V \times V$ with marginals $\mu$ and $\nu$. When the cost $c$ corresponds to a shortest-path metric on $G$, this is equivalent to an uncapacitated minimum-cost flow problem:
 
-$$\mathcal{W}_c(\mu, \nu) = \min_{\substack{x_{ij} \geq 0 \\ (i,j)\in A}} \sum_{(i,j) \in A} c_{ij}\, x_{ij}$$
+$$\mathcal{W}_c(\mu, \nu) = \min_{x_{ij} \geq 0, \ (i,j)\in A} \sum_{(i,j) \in A} c_{ij}\, x_{ij}$$
 
 $$\text{s.t.} \qquad \sum_{j:\,(i,j)\in A} x_{ij} - \sum_{j:\,(j,i)\in A} x_{ji} = \mu(i) - \nu(i), \qquad \forall\, i \in V.$$
 
@@ -39,7 +40,7 @@ $$\text{s.t.} \qquad \sum_{j:\,(i,j)\in A} x_{ij} - \sum_{j:\,(j,i)\in A} x_{ji}
 
 The **Wasserstein barycenter** of $\mu_1,\ldots,\mu_K$ is the probability measure $z^* \in \mathbb{R}^n_+$ solving
 
-$$z^* = \arg\min_{\substack{z \geq 0 \\ \sum_v z(v)=1}} \sum_{k=1}^{K} \mathcal{W}_c(\mu_k, z).$$
+$$z^* = \text{argmin}_{\substack{z \geq 0, \ \sum_{i \in V} z(i)=1}} \sum_{k=1}^{K} \mathcal{W}_c(\mu_k, z).$$
 
 ### Joint LP Formulation
 
