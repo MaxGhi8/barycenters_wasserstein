@@ -17,6 +17,9 @@ from gurobipy import GRB, Model, quicksum, tuplelist
 from numpy import genfromtxt
 
 
+#########################################
+# Utilities
+#########################################
 def DrawDigit(A, label=""):
     """Draw single digit as a greyscale matrix"""
     plt.figure(figsize=(6, 6))
@@ -43,20 +46,29 @@ def EuclideanBarycenter(images):
     return avg
 
 
+#########################################
+# Bipartite formulation
+#########################################
 def BuildBipartiteGraph(N, ground="L2", plot=False):
-    """Build a bipartite graph, as support to compute KW distances"""
+    """
+    Build a bipartite graph, as support to compute KW distances
+
+    N: is the number of points per direction
+    """
 
     def ID(x, y):
         return x * N + y
 
     G = nx.DiGraph()
 
+    # Create the nodes of the bipartite graph giving an ID
     n = N * N
     for i in range(N):
         for j in range(N):
-            G.add_node(ID(i, j), pos=(2, ID(i, j)))
-            G.add_node(n + ID(i, j), pos=(6, ID(i, j)))
+            G.add_node(ID(i, j), pos=(2, ID(i, j)))  # starting node
+            G.add_node(n + ID(i, j), pos=(6, ID(i, j)))  # ending node
 
+    # Adding the arcs and the cost functions
     for i in range(N):
         for j in range(N):
             for v in range(N):
@@ -76,6 +88,7 @@ def BuildBipartiteGraph(N, ground="L2", plot=False):
                             ID(i, j), n + ID(v, w), weight=max(abs(i - v), abs(j - w))
                         )
 
+    # Plotting routine
     if plot:
         plt.figure(3, figsize=(12, 12))
         plt.axis("equal")
@@ -97,23 +110,30 @@ def BuildBipartiteGraph(N, ground="L2", plot=False):
 
 
 def BarycenterBipartite(images, G):
-    """Compute the Kantorovich Wasserstein Barycenter of any order using bipartite subgraphs"""
-    K = len(images)
-    n = len(images[0])
+    """
+    Compute the Kantorovich Wasserstein Barycenter of any order using bipartite subgraphs
+
+    G is a graph with an example of pair with the indexes for both input,
+    output and the cost of each arc with the selected norm.
+    """
+
+    K = len(images)  # number of images
+    n = len(images[0])  # length of the flattened image
 
     # Build model
     m = Model()
-    m.setParam(GRB.Param.Method, 2)
-    m.setParam(GRB.Param.NumericFocus, 1)
-    m.setParam(GRB.Param.OutputFlag, 0)
-    m.setParam(GRB.Param.Crossover, 0)
-    m.setAttr(GRB.Attr.ModelSense, 1)
+    m.setParam(GRB.Param.Method, 2)  # Use Barrier algorithm
+    m.setParam(GRB.Param.NumericFocus, 1)  # Increase numerical stability and precision
+    m.setParam(GRB.Param.OutputFlag, 0)  # Disable console logging
+    m.setParam(GRB.Param.Crossover, 0)  # Disable crossover to save time
+    m.setAttr(GRB.Attr.ModelSense, 1)  # 1 = minimization problem
 
-    # Create variables
+    # Create variables for the barycenter
     Y = {}
     for v in range(n):
-        Y[v] = m.addVar(obj=0)
+        Y[v] = m.addVar(obj=0)  # obj is the coefficient in the objective function
 
+    # Create the variables for all the images
     X = {}
     for e in G.edges():
         i, j = e
@@ -196,6 +216,12 @@ def TestPaperBipartite():
                     writer.writerow(A)
 
 
+#########################################
+# Network flow formulation
+#########################################
+
+
+# For l_1 the cardinal directions are enough
 def BarycenterL1(images):
     """Compute the Kantorovich Wasserstein Barycenter of order 1 with L1 as ground distance"""
     K = len(images)
@@ -225,24 +251,26 @@ def BarycenterL1(images):
                 X[k, ID(i, j)] = {}
     X[k, n] = {}
 
+    # Create the sub-graph (fig. 2 of the paper) and the associated variables
+    # For l_1 the cardinal directions are enough
     A = []
     for k in range(K):
+        # Horizontal directions
         for i in range(s):
             for j in range(s - 1):
                 X[k, ID(i, j)][k, ID(i, j + 1)] = m.addVar(obj=1)
                 X[k, ID(i, j + 1)][k, ID(i, j)] = m.addVar(obj=1)
 
-                # Keep adding arcs to A
                 if k == 0:
                     A.append((ID(i, j), ID(i, j + 1)))
                     A.append((ID(i, j + 1), ID(i, j)))
 
+        # Vertical directions
         for i in range(s - 1):
             for j in range(s):
                 X[k, ID(i, j)][k, ID(i + 1, j)] = m.addVar(obj=1)
                 X[k, ID(i + 1, j)][k, ID(i, j)] = m.addVar(obj=1)
 
-                # Keep adding arcs to A
                 if k == 0:
                     A.append((ID(i, j), ID(i + 1, j)))
                     A.append((ID(i + 1, j), ID(i, j)))
@@ -253,8 +281,8 @@ def BarycenterL1(images):
 
     # Flow variables
     for i in range(n):
-        Fs = A.select(i, "*")
-        Bs = A.select("*", i)
+        Fs = A.select(i, "*")  # Outgoing arcs
+        Bs = A.select("*", i)  # Ingoing arcs
         for k in range(K):
             m.addConstr(
                 quicksum(X[k, i][k, j] for _, j in Fs)
@@ -290,7 +318,7 @@ def TestPaperL1():
     SFX = ".csv"
     NUM = [str(i) for i in range(10)]
 
-    for K in [50, 100, 200, 400, 800, 1600, 3200]:
+    for K in [50]:  # [50, 100, 200, 400, 800, 1600, 3200]:
         for n in NUM:
             FILEIN = DIR + n + SFX
             start = time.time()
@@ -319,6 +347,7 @@ def TestPaperL1():
                 writer.writerow(A)
 
 
+# For l_inf we use the cardinal directions and the main diagonals
 def BarycenterLinf(images):
     """Compute the Kantorovich Wasserstein Barycenter of order 1 with Linf as ground distance"""
     K = len(images)
@@ -350,6 +379,7 @@ def BarycenterLinf(images):
 
     A = []
     for k in range(K):
+        # Horizontal directions
         for i in range(s):
             for j in range(s - 1):
                 X[k, ID(i, j)][k, ID(i, j + 1)] = m.addVar(obj=1)
@@ -359,6 +389,7 @@ def BarycenterLinf(images):
                     A.append((ID(i, j), ID(i, j + 1)))
                     A.append((ID(i, j + 1), ID(i, j)))
 
+        # Vertical directions
         for i in range(s - 1):
             for j in range(s):
                 X[k, ID(i, j)][k, ID(i + 1, j)] = m.addVar(obj=1)
@@ -368,6 +399,7 @@ def BarycenterLinf(images):
                     A.append((ID(i, j), ID(i + 1, j)))
                     A.append((ID(i + 1, j), ID(i, j)))
 
+        # Diagonal directions
         for i in range(s - 1):
             for j in range(s - 1):
                 X[k, ID(i, j)][k, ID(i + 1, j + 1)] = m.addVar(obj=1)
@@ -451,6 +483,7 @@ def TestPaperLinf():
                 writer.writerow(A)
 
 
+# For the l_2 distance we use the graph with L=2 (see Fig.2 in the paper)
 def BarycenterL2(images, G):
     """Compute the Kantorovich Wasserstein Barycenter of order 1 with L2 as ground distance"""
     K = len(images)
@@ -625,7 +658,7 @@ def TestPaperL2():
     for L in Ls:
         Gs[L] = BuildGraph(28, L)
 
-    # WARNING: with K > 800, andL > 3 it might run out of memory, even with 32GB of RAM
+    # WARNING: with K > 800, and L > 3 it might run out of memory, even with 32GB of RAM
     for K in [50, 100, 200, 400, 800, 1600, 3200]:
         for n in NUM:
             for L in Ls:
@@ -661,10 +694,13 @@ def TestPaperL2():
 # ------------------------------------------
 if __name__ == "__main__":
     # Uncomment the following to run the test described in the paper
+    ## Bipartite formulation
+    TestPaperBipartite()
+
+    ## Network flow formulation
     # TestPaperL1()
     # TestPaperLinf()
     # TestPaperL2()
-    # TestPaperBipartite()
 
     # Uncomment the following for plotting a gew graph
     # BuildGraph(5, 1, plot=True)
