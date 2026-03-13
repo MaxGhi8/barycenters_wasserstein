@@ -182,7 +182,7 @@ def TestPaperBipartite():
     for gd in GD:
         G[gd] = BuildBipartiteGraph(28, gd)
 
-    DIR = "..\\data\\barycenter_"
+    DIR = "./data/barycenter_"
     SFX = ".csv"
     NUM = [str(i) for i in range(10)]
 
@@ -314,7 +314,7 @@ def TestPaperL1():
     # add the handlers to the logger
     logger.addHandler(fh)
 
-    DIR = "..\\data\\barycenter_"
+    DIR = "./data/barycenter_"
     SFX = ".csv"
     NUM = [str(i) for i in range(10)]
 
@@ -450,7 +450,7 @@ def TestPaperLinf():
     # add the handlers to the logger
     logger.addHandler(fh)
 
-    DIR = "..\\data\\barycenter_"
+    DIR = "./data/barycenter_"
     SFX = ".csv"
     NUM = [str(i) for i in range(10)]
 
@@ -648,7 +648,7 @@ def TestPaperL2():
     # add the handlers to the logger
     logger.addHandler(fh)
 
-    DIR = "..\\data\\barycenter_"
+    DIR = "./data/barycenter_"
     SFX = ".csv"
     NUM = [str(i) for i in range(10)]
 
